@@ -3,7 +3,7 @@ import argparse
 import re
 import sys
 import time
-from datetime import date
+import datetime
 
 FILE_NAME_FORMAT = r"\w+\.txt$"
 
@@ -54,9 +54,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-target', '-t', default='YeastGenes')
 parser.add_argument('-output', '-o', default='GeneParseResults')
 parser.add_argument('-match', '-m', default='gc')
-parser.add_argument('-summarize', '-s', default=True, choices=[True, False])
+parser.add_argument('-detailLogs', '-d', action='store_true')
 args = parser.parse_args()
-# could add an option to overwrite found duplicates?
 
 if not os.path.isdir(args.target):
     print(f"ERROR: Directory {args.target} not found")
@@ -87,16 +86,18 @@ for f in os.listdir(args.target):
     pattern_content = find_pattern_content(sequence, pattern)
     average += pattern_content
     third_ad_res = transcribe(sequence)
-    print("\nAnalysis complete. Writing file...")
+    print("\nAnalysis complete.")
 
-    result_f = os.path.join(args.output, f)
-    with open(result_f, 'w') as file:
-        file.write(f"{f[:-4]} Sequence Analysis Report\n\n")
-        file.write(f"Matching Pattern: {pattern}\n")
-        file.write(f"Results: {pattern_content}%\n")
-        file.write("\nThird Position Ratio Results:\n")
-        for i in third_ad_res:
-            file.write(f"\t{i}: {third_ad_res[i]}%\n")
+    if args.detailLogs:
+        print("Writing file...")
+        result_f = os.path.join(args.output, f)
+        with open(result_f, 'w') as file:
+            file.write(f"{f[:-4]} Sequence Analysis Report\n\n")
+            file.write(f"Matching Pattern: {pattern}\n")
+            file.write(f"Results: {pattern_content}%\n")
+            file.write("\nThird Position Ratio Results:\n")
+            for i in third_ad_res:
+                file.write(f"\t{i}: {third_ad_res[i]}%\n")
     print("Complete.")
     print("\n##########################")
 
@@ -104,20 +105,19 @@ time_stop = time.time()
 print(f"Processed {num_files} files in {time_stop-time_start} seconds.")
 summary_loc = ""
 
-if args.summarize:
-    pattern_avg = round(average/num_files, 1)
-    print(f"\nAverage Pattern Content: {pattern_avg}")
-    summary_title = f"{args.target}_summary_{date.day}_{date.month}_{date.year}.txt" # datetime issue
-    sum_file = os.path.join(args.output, summary_title)
-    with open(sum_file, 'w') as file:
-        file.write(f"Summary of Analysis on {args.target}\n\n")
-        file.write(f"Numer of Files Analyzed: {num_files}\n")
-        file.write(f"Pattern: {pattern}\n")
-        file.write(f"Results: {pattern_avg}\n")
-        file.write(f"\nTime elapsed: {round(time_stop-time_start, 3)} seconds")
-    summary_loc = summary_title
+pattern_avg = round(average/num_files, 1)
+print(f"\nAverage Pattern Content: {pattern_avg}")
+curr_date = datetime.datetime.now()
+summary_title = f"{args.target}_summary_{curr_date.day}_{curr_date.month}_{curr_date.year}.txt"
+sum_file = os.path.join(args.output, summary_title)
+with open(sum_file, 'w') as file:
+    file.write(f"Summary of Analysis on {args.target}\n\n")
+    file.write(f"Numer of Files Analyzed: {num_files}\n")
+    file.write(f"Pattern: {pattern}\n")
+    file.write(f"Results: {pattern_avg}%\n")
+    file.write(f"\nTime elapsed: {round(time_stop-time_start, 3)} seconds")
+summary_loc = summary_title
 
 print(f"Results located in ./{args.output}")
-if args.summarize:
-    print(f"Summary File: {os.path.join(args.output, summary_loc)}")
+print(f"Summary File: {os.path.join(args.output, summary_loc)}")
 
